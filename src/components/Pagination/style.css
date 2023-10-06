@@ -1,0 +1,53 @@
+
+.pageination-container {
+    display: flex;
+    gap: 20px;
+}
+
+.pageination-change-link-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pageination-change-link-icon-box{
+    width: 16px;
+    height: 16px;
+}
+
+.pageination-change-link-text{
+    color: rgba(0, 0, 0, 0.70);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 140%;
+}
+.pageination-change-link-text:hover{
+    cursor: pointer;
+}
+
+.pageination-divider{
+    color: rgba(0, 0, 0, 0.10);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 140%;
+}
+
+.pageination-active-text{
+    color: #000;
+
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 140%;
+}
+
+.pageination-text{
+    color: rgba(0, 0, 0, 0.40);
+
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 140%;
+}
+.pageination-text:hover{
+    color: rgba(0, 0, 0, 0.60);
+    cursor: pointer;
+}
