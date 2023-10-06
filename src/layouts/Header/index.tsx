@@ -150,7 +150,7 @@ export default function Header() {
         const {email} = user;
         navigator(USER_PATH(email));
       }
-      
+
       // function : patch 
       const patchBoardResponse = (code : string) => {
         if (code === 'NU' || code === 'AF') {

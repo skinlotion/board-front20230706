@@ -36,6 +36,12 @@ export default function BoardUpdate() {
     }
     return;
   }
+    
+    const { title, content, boardImageList } = responseBody as GetBoardResponseDto;
+    setTitle(title);
+    setContents(content);
+    convertUrlsToFiles(boardImageList).then(files => setImages(files));
+    setImageUrls(boardImageList);
 
   //          event handler: 제목 변경 이벤트 처리          //
   const onTitleChangeHandler = (event: ChangeEvent<HTMLInputElement>) => {
@@ -86,13 +92,9 @@ export default function BoardUpdate() {
     
 
     if (!boardNumber) return;
-    getBoardRequest(boardNumber).then(getboardResponse)
+    getBoardrequest(boardNumber).then(getboardResponse)
 
-    const { title, content, boardImageList } = boardMock;
-    setTitle(title);
-    setContents(content);
-    convertUrlsToFiles(boardImageList).then(files => setImages(files));
-    setImageUrls(boardImageList);
+    
   }, [boardNumber]);
 
   //          render: 게시물 수정 화면 렌더링          //
