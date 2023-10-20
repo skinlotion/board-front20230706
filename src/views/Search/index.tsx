@@ -7,6 +7,10 @@ import BoardItem from 'components/BoardItem';
 import Pageination from 'components/Pagination';
 import { SEARCH_PATH } from 'constant';
 import { BoardListItem } from 'types';
+import { getRelationListRequest, getSearchBoardListRequest } from 'apis';
+import { GetSearchBoardListResponseDto } from 'apis/dto/response/board';
+import ResponseDto from 'apis/dto/response';
+import { GetRelationListResponseDto } from 'apis/dto/response/search';
 
 
 //            component : 검색 페이지                //
@@ -20,10 +24,32 @@ export default function Search() {
     viewBoardList, viewPageNumberList, totalSection, setBoardList,} = usePagination<BoardListItem>(5);
   //            state : 연관 검색어 리스트 상태            //
   const [relationWordList, setRelationWordList] = useState<string[]>([]);
-
+  //            state : 이전 검색어 리스트 상태            //
+  const [preSearchWord, setPreSearchWord] = useState<string | undefined>(undefined);
+  //            state : effect flag 상태            //
+  const [effectFlag, setEffectFlag] = useState<boolean>(true);
   //            function : 네비게이트 함수            //
   const navigator = useNavigate();
+  //            function : get search board list 처리 함수            //
+  const getSearchBoardListResponse = (responseBody : GetSearchBoardListResponseDto | ResponseDto) => {
+    const {code} = responseBody;
+    if( code === 'DBE') alert('데이터 베이스 오류 입니다.')
+    if(code !== 'SU') return;
 
+    const {searchList} = responseBody as GetSearchBoardListResponseDto;
+    setBoardList(searchList);
+    setCount(searchList.length);
+    setPreSearchWord(word);
+  }
+  //            function : get relation list 처리 함수            //
+  const getRelationListResponse = (responseBody : GetRelationListResponseDto | ResponseDto) => {
+    const {code} = responseBody;
+    if( code === 'DBE') alert('데이터 베이스 오류 입니다.')
+    if(code !== 'SU') return;
+
+    const {relativeWordList} = responseBody as GetRelationListResponseDto;
+    setRelationWordList(relativeWordList);
+  }
   //            event Handler : 관련검색어 뱃지 클릭 이벤트 처리            //
   const onWordBadgeClickHandler = (word : string) => {
     navigator(SEARCH_PATH(word));
@@ -31,12 +57,14 @@ export default function Search() {
   
   //            effect : word path variable이 변경될 리스트 불러오기            //
   useEffect(() => {
+    if(effectFlag) {
+      setEffectFlag(false);
+      return;
+    }
     if (!word) return;
-    const boardList = searchListMock(word);
-    setBoardList(boardList);
-    setCount(boardList.length);
-    setRelationWordList(relationWordListMock);
-  },[word])
+    getSearchBoardListRequest(word,preSearchWord).then(getSearchBoardListResponse);
+    getRelationListRequest(word).then(getRelationListResponse);
+  },[word, effectFlag])
 
   
 

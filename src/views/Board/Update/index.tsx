@@ -4,7 +4,7 @@ import { useBoardStore } from 'stores';
 import { useNavigate, useParams } from 'react-router-dom';
 import { boardMock } from 'mocks';
 import { convertUrlsToFiles } from 'utils';
-import { getBoardrequest } from 'apis';
+import { getBoardRequest} from 'apis';
 import { GetBoardResponseDto } from 'apis/dto/response/board';
 import ResponseDto from 'apis/dto/response';
 import { MAIN_PATH } from 'constant';
@@ -24,24 +24,25 @@ export default function BoardUpdate() {
   const { images, setImages } = useBoardStore();
   //          state: 게시물 이미지 URL 상태          //
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  //function : 네비게이트 함수
+
+  //          function: 네비게이트 함수          //
   const navigator = useNavigate();
-  //function : get voard response 처리 함수
-  const getboardResponse = (responseBody : GetBoardResponseDto | ResponseDto) => {
-    const{code} = responseBody;
-    if (code === 'NB') alert ('존재하지 않는 게시물 입니다.');
-    if (code === 'DBE') alert ('데이터 베이스 오류 입니다.');
+  //          function: get board response 처리 함수          //
+  const getBoardResponse = (responseBody: GetBoardResponseDto | ResponseDto) => {
+    const { code } = responseBody;
+    if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+    if (code === 'DBE') alert('데이터베이스 오류입니다.');
     if (code !== 'SU') {
       navigator(MAIN_PATH);
+      return;
     }
-    return;
-  }
     
     const { title, content, boardImageList } = responseBody as GetBoardResponseDto;
     setTitle(title);
     setContents(content);
     convertUrlsToFiles(boardImageList).then(files => setImages(files));
     setImageUrls(boardImageList);
+  }
 
   //          event handler: 제목 변경 이벤트 처리          //
   const onTitleChangeHandler = (event: ChangeEvent<HTMLInputElement>) => {
@@ -88,11 +89,8 @@ export default function BoardUpdate() {
 
   //          effect: 게시물 번호 path variable이 변경될 때마다 실행될 함수          //
   useEffect(() => {
-
-    
-
     if (!boardNumber) return;
-    getBoardrequest(boardNumber).then(getboardResponse)
+    getBoardRequest(boardNumber).then(getBoardResponse);
 
     
   }, [boardNumber]);

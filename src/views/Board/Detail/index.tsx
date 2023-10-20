@@ -8,13 +8,14 @@ import { useUserStore } from 'stores';
 import { usePagination } from 'hooks';
 import CommentItem from 'components/CommentItem';
 import Pagination from 'components/Pagination';
-import { BOARD_UPDATE_PATH, MAIN_PATH, USER_PATH } from 'constant';
-import { PostCommentRequest, getBoardrequest, getCommentListRequest, getFavoriteListRequest, putFavoriteRequest } from 'apis';
+import { AUTH_PATH, BOARD_UPDATE_PATH, MAIN_PATH, USER_PATH } from 'constant';
+import { deleteBoardRequest, getBoardRequest, getCommentListRequest, getFavoriteListRequest, increaseViewCountRequest, postCommentRequest, putFavoriteRequest } from 'apis';
 import { GetUserResponseDto } from 'apis/dto/response/user';
 import ResponseDto from 'apis/dto/response';
 import { GetBoardResponseDto, GetCommentListResponseDto, GetFavoriteListResponseDto } from 'apis/dto/response/board';
 import { useCookies } from 'react-cookie';
 import { PostCommentRequestDto } from 'apis/dto/request/board';
+import dayjs from 'dayjs';
 
 //          component: 게시물 상세보기 페이지          //
 export default function BoardDetail() {
@@ -23,11 +24,16 @@ export default function BoardDetail() {
   const { boardNumber } = useParams();
   //          state: 로그인 유저 상태          //
   const { user } = useUserStore();
-  //            state : cookie 상태           //
+  //          state: cookie 상태          //
   const [cookies, setCookie] = useCookies();
   
   //          function: 네비게이트 함수          //
   const navigator = useNavigate();
+  //          function: increase view count response 처리 함수          //
+  const increaseViewCountResponse = (code: string) => {
+    if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+    if (code === 'DBE') alert('데이터베이스 오류입니다.');
+  };
   
   //          component: 게시물 상세보기 상단 컴포넌트          //
   const BoardDetailTop = () => {
@@ -38,27 +44,43 @@ export default function BoardDetail() {
     //          state: 게시물 상태          //
     const [board, setBoard] = useState<Board | null>(null);
 
-    //            function : 작성일 포멧 변경 함수            //
-    const getWriteDatetimeFormat = (writeDateTime : string | undefined) => {
+    //          function: 작성일 포멧 변경 함수          //
+    const getWriteDatetimeFormat = (writeDatetime: string | undefined) => {
       if (!writeDatetime) return '';
-      const date = dayjs
+      const date = dayjs(writeDatetime);
+      return date.format('YYYY. MM. DD.');
     }
-      
-    //            function : get board response 처리 함수           //
-    const getBoardResponse = (responseBody : GetBoardResponseDto | ResponseDto) => {
-      const {code} = responseBody;
-      if (code === 'NB') alert ('존재하지 않는 게시물 입니다.');
-      if (code === 'DBE') alert ('데이터 베이스 오류 입니다.');
-      if (code !== 'SU'){
+    //          function: get board response 처리 함수          //
+    const getBoardResponse = (responseBody: GetBoardResponseDto | ResponseDto) => {
+      const { code } = responseBody;
+      if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+      if (code === 'DBE') alert('데이터베이스 오류입니다.');
+      if (code !== 'SU') {
         navigator(MAIN_PATH);
         return;
       }
-      const board : Board = {...responseBody as GetBoardResponseDto};
+
+      const board: Board = { ...responseBody as GetBoardResponseDto };
       setBoard(board);
 
       if (!user) return;
       const isWriter = user.email === board.writerEmail;
       setWriter(isWriter);
+    };
+
+    //          function: delete board response 처리 함수          //
+    const deleteBoardResponse = (code: string) => {
+      if (code === 'VF') alert('잘못된 접근입니다.');
+      if (code === 'NU' || code === 'AF') {
+        navigator(AUTH_PATH);
+        return;
+      } 
+      if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+      if (code === 'NP') alert('권한이 없습니다.');
+      if (code === 'DBE') alert('데이터베이스 오류입니다.');
+      if (code !== 'SU') return;
+
+      navigator(MAIN_PATH);
     }
 
     //          event handler: 작성자 클릭 이벤트 처리          //
@@ -78,20 +100,20 @@ export default function BoardDetail() {
     };
     //          event handler: 삭제 버튼 클릭 이벤트 처리          //
     const onDeleteButtonClickHandler = () => {
-      alert(`${boardNumber} 게시물 삭제!`);
-      navigator(MAIN_PATH);
+      const accessToken = cookies.accessToken;
+      if (!boardNumber || !accessToken) return;
+      deleteBoardRequest(boardNumber, accessToken).then(deleteBoardResponse);
     };
 
     //          effect: 게시물 번호 path variable이 바뀔때 마다 게시물 불러오기          //
     useEffect(() => {
-      if(!boardNumber){
+      if (!boardNumber) {
         alert('잘못된 접근입니다.');
         navigator(MAIN_PATH);
         return;
       }
-      getBoardrequest(boardNumber).then(getBoardResponse);
-
-    }, [boardNumber]);
+      getBoardRequest(boardNumber).then(getBoardResponse);
+    }, []);
 
     //          render: 게시물 상세보기 상단 컴포넌트 렌더링          //
     return (
@@ -100,10 +122,10 @@ export default function BoardDetail() {
           <div className='board-detail-title'>{board?.title}</div>
           <div className='board-detail-sub-box'>
             <div className='board-detail-write-info-box'>
-              <div className='board-detail-writer-profile-image' style={{ backgroundImage: `url(${DefaultProfileImage})` }}></div>
+              <div className='board-detail-writer-profile-image' style={{ backgroundImage: `url(${board?.writerProfileImage ? board.writerProfileImage : DefaultProfileImage})` }}></div>
               <div className='board-detail-writer-nickname' onClick={onNicknameClickHandler}>{board?.writerNickname}</div>
               <div className='board-detail-info-divider'>{'\|'}</div>
-              <div className='board-detail-write-date'>{board?.writeDatetime}</div>
+              <div className='board-detail-write-date'>{getWriteDatetimeFormat(board?.writeDatetime)}</div>
             </div>
             {isWriter && (
             <div className='icon-button' onClick={onMoreButtonClickHandler}>
@@ -132,12 +154,14 @@ export default function BoardDetail() {
 
     //          state: 댓글 textarea 참조 상태          //
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
     //          state: 좋아요 리스트 상태          //
     const [favoriteList, setFavoriteList] = useState<FavoriteListItem[]>([]);
     //          state: 댓글 리스트 페이지네이션 상태          //
     const {currentPageNumber, setCurrentPageNumber, currentSectionNumber, setCurrentSectionNumber, viewBoardList, viewPageNumberList, totalSection, setBoardList} = usePagination<CommentListItem>(3);
     //          state: 댓글 갯수 상태          //
     const [commentsCount, setCommentsCount] = useState<number>(0);
+
     //          state: 좋아요 박스 상태          //
     const [showFavorite, setShowFavorite] = useState<boolean>(false);
     //          state: 댓글 박스 상태          //
@@ -146,22 +170,21 @@ export default function BoardDetail() {
     const [isFavorite, setFavorite] = useState<boolean>(false);
     //          state: 댓글 상태          //
     const [comment, setComment] = useState<string>('');
-    
 
-    //            function : get favorite lsit rsponse 처리 함수           //
-    const getFavoriteListResponse = (responseBody : GetFavoriteListResponseDto | ResponseDto) => {
+    //           function: get favorite list response 처리 함수          //
+    const getFavoriteListResponse = (responseBody: GetFavoriteListResponseDto | ResponseDto) => {
       const { code } = responseBody;
-      if (code === 'NB') alert ('존재하지 않는 게시물 입니다.');
-      if (code === 'DBE') alert ('데이터베이스 오류입니다.')
+      if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+      if (code === 'DBE') alert('데이터베이스 오류입니다.');
       if (code !== 'SU') return;
 
-      const {favoriteList} = responseBody as GetFavoriteListResponseDto;
+      const { favoriteList } = responseBody as GetFavoriteListResponseDto;
       setFavoriteList(favoriteList);
 
       const isFavorite = favoriteList.findIndex(item => item.email === user?.email) !== -1;
       setFavorite(isFavorite);
-    }
-    //            function : get comment list response 처리함수           //
+    };
+    //           function: get comment list response 처리 함수          //
     const getCommentListResponse = (responseBody: GetCommentListResponseDto | ResponseDto) => {
       const { code } = responseBody;
       if (code === 'NB') alert('존재하지 않는 게시물입니다.');
@@ -172,31 +195,32 @@ export default function BoardDetail() {
       setBoardList(commentList);
       setCommentsCount(commentList.length);
     };
-    //            function : favorite response 처리 함수           //
-    const putFavoriteReponse = (code : string) => {
-      if(code === 'VF') alert('잘못된 접근입니다.');
-      if(code === 'NU') alert('존재하지 않는 유저입니다.');
-      if(code === 'NB') alert('존재하지 않는 게시물입니다.');
-      if(code === 'AF') alert('인증에 실패하였습니다.');
-      if(code === 'DBE') alert('데이터베이스 오류입니다.');
-      if(code !== 'SU') return;
+    //           function: put favorite response 처리 함수          //
+    const putFavoriteResponse = (code: string) => {
+      if (code === 'VF') alert('잘못된 접근입니다.');
+      if (code === 'NU') alert('존재하지 않는 유저입니다.');
+      if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+      if (code === 'AF') alert('인증에 실패했습니다.');
+      if (code === 'DBE') alert('데이터베이스 오류입니다.');
+      if (code !== 'SU') return;
 
-      if(!boardNumber) return;
+      if (!boardNumber) return;
       getFavoriteListRequest(boardNumber).then(getFavoriteListResponse);
     }
+    //           function: post comment response 처리 함수          //
+    const postCommentResponse = (code: string) => {
+      if (code === 'VF') alert('잘못된 접근입니다.');
+      if (code === 'NB') alert('존재하지 않는 게시물입니다.');
+      if (code === 'NU') alert('존재하지 않는 유저입니다.');
+      if (code === 'AF') alert('인증에 실패했습니다.');
+      if (code === 'DBE') alert('데이터베이스 오류입니다.');
+      if (code !== 'SU') return;
 
-    //            function : post comment response 처리 함수            //
-    const postCommentResponse = (code : string) => {
-      if(code === 'VF') alert('잘못된 접근입니다.');
-      if(code === 'NU') alert('존재하지 않는 유저입니다.');
-      if(code === 'NB') alert('존재하지 않는 게시물입니다.');
-      if(code === 'AF') alert('인증에 실패하였습니다.');
-      if(code === 'DBE') alert('데이터베이스 오류입니다.');
-      if(code !== 'SU') return;
-
-      if(!boardNumber) return;
+      setComment('');
+      if (!boardNumber)  return;
       getCommentListRequest(boardNumber).then(getCommentListResponse);
     }
+
     //           event handler: 좋아요 박스 보기 버튼 클릭 이벤트 처리          //
     const onShowFavoriteButtonClickHandler = () => {
       setShowFavorite(!showFavorite);
@@ -214,22 +238,24 @@ export default function BoardDetail() {
       }
       if (!boardNumber) return;
 
-      putFavoriteRequest(boardNumber, accessToken).then(putFavoriteReponse);
+      putFavoriteRequest(boardNumber, accessToken).then(putFavoriteResponse);
     }
-    //            event handler : 댓글 작성 버튼 클릭 이벤트 처리           //
+    //           event handler: 댓글 작성 버튼 클릭 이벤트 처리          //
     const onCommentButtonClickHandler = () => {
       const accessToken = cookies.accessToken;
-      if(!accessToken) {
-        alert ('로그인이 필요합니다.');
+      if (!accessToken) {
+        alert('로그인이 필요합니다.');
         return;
       }
       if (!boardNumber) return;
 
-      const requestBody : PostCommentRequestDto = {
-        content : comment
+      const requestBody: PostCommentRequestDto = {
+        content: comment
       };
-      PostCommentRequest (requestBody, boardNumber, accessToken).then(postCommentResponse);
+
+      postCommentRequest(requestBody, boardNumber, accessToken).then(postCommentResponse);
     }
+
     //           event handler: 댓글 변경 이벤트 처리          //
     const onCommentChangeHandler = (event: ChangeEvent<HTMLTextAreaElement>) => {
       const comment = event.target.value;
@@ -242,8 +268,8 @@ export default function BoardDetail() {
 
     //          effect: 게시물 번호 path variable이 바뀔때 마다 좋아요 및 댓글 리스트 불러오기          //
     useEffect(() => {
-      if(!boardNumber){
-        alert ('잘못된 접근 입니다.');
+      if (!boardNumber) {
+        alert('잘못된 접근입니다.');
         navigator(MAIN_PATH);
         return;
       }
@@ -324,7 +350,21 @@ export default function BoardDetail() {
         )}
       </div>
     )
-  }
+  };
+
+  //          effect: 첫 렌더시 실행할 함수          //
+  let effectFlag = true;
+  useEffect(() => {
+
+    if (effectFlag) {
+      effectFlag = false;
+      return;
+    }
+    
+    if (!boardNumber) return;
+    increaseViewCountRequest(boardNumber).then(increaseViewCountResponse);
+
+  }, []);
 
   //          render: 게시물 상세보기 페이지 렌더링          //
   return (

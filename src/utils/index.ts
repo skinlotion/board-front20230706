@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 export const convertUrlsToFiles = async (urls: string[]) => {
     const files = [];
     for (let index = 0; index < urls.length; index++) {
@@ -15,4 +17,16 @@ export const convertUrlToFile = async (url: string) => {
     const meta = { type: `image/${extd}` };
 
     return new File([data], fileName as string, meta);    
+}
+
+
+export const getWriteDatetimeFormat = (writeDatetime: string | undefined) => {
+    if (!writeDatetime) return '';
+    const date = dayjs(writeDatetime);
+    return date.format('YYYY. MM. DD.');
+}
+
+export const cutString = ( str : string | undefined, size : number) => {
+    if (!str) return'';
+    return str.length > size ? str.substring(0,size) + '...' : str;
 }
