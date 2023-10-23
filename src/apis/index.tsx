@@ -12,7 +12,7 @@ import { error } from "console";
 import { GetPopularListResponseDto, GetRelationListResponseDto } from "./dto/response/search";
 
 // description: Domain URL //
-const DOMAIN = 'http://13.125.100.67 :4000';
+const DOMAIN = 'http://13.125.100.67:4000';
 
 // description: API Domain 주소 //
 const API_DOMAIN = `${DOMAIN}/api/v1`;
